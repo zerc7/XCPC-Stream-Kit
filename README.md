@@ -70,16 +70,25 @@
 编码参数：H.264 Main / yuv420p / SAR 1:1；屏幕 1920×1080 @ 25 fps 5 Mbps，摄像头
 1280×720 @ 25 fps 2.5 Mbps；GOP 50 帧（2 秒一个关键帧，方便 CDS 切 reaction 片段）。
 
-设计来源对照 ICPC 官方 [unicup](https://github.com/icpc/unicup) 镜像里的 ansible / systemd 方案：
+### 与同类方案的关系
 
-| unicup（Linux / systemd） | 本工具包（Windows） |
-|---|---|
-| `files/start-vlc-screen`（`MODE=ffmpeg`） | `scripts\stream_screen.bat` |
-| `files/start-vlc-dualwebcam`（`MODE=ffmpeg`） | `scripts\stream_camera.bat` |
-| `vlc-webcam-front/side.service`，`Restart=always` | 脚本内置的重连循环 |
-| `start-vlc-screen` 的 `MODE=vlc` | `fallback-vlc-screen.bat`（备用，仅 VLC 抓屏） |
-| systemd 开机自启 | 「启动」文件夹快捷方式 → `start-silent.vbs` |
-| systemd `EnvironmentFile` | `config.bat` |
+这套东西不是新发明，ICPC 自己在 World Finals 就是这么做的：官方
+[Coach View 文档](https://tools.icpc.global/docs/CoachView.pdf) 的附录写明，每台选手机跑两个
+VLC 实例，桌面推到 `9090`、摄像头推到 `8080`，输出都是 `http{mux=ts}`；WF 镜像再把这两条命令
+包成 systemd 服务（`vlc-desktop` / `vlc-camera`，`Restart=always`）。本工具沿用同一架构，
+差异集中在 Windows 侧：
+
+| 方案 | 抓屏 / 编码 | 分发 | 适用场景 |
+|---|---|---|---|
+| ICPC WF（官方文档 + Linux 镜像） | VLC `screen://` / v4l2 | VLC `http{mux=ts}` | Linux，systemd 托管 |
+| **本工具包** | ffmpeg（`ddagrab` / `dshow`） | VLC `http{mux=ts}` | Windows，无 systemd |
+| [hydro-dev/xcpc-tools](https://github.com/hydro-dev/xcpc-tools) | 不产生流，只消费流地址 | 代理 + 监控面板 | 国内 XCPC，配合选手机镜像 |
+| [webrtc-grabber](https://github.com/irdkwmnsb/webrtc-grabber) | Electron 抓屏 / 摄像头 | WebRTC + SFU relay | 给人看低延迟画面，不是给 CDS |
+| MediaMTX / SRS / nginx-rtmp | 不抓屏 | RTMP / HLS / WebRTC | 通用流服务器；输出不是 CDS 要的裸 HTTP-TS |
+
+为什么不直接用 VLC 抓屏：Windows 上 `screen://` 走 GDI，慢且会让本机鼠标闪，也没有
+`ddagrab` 与编码器选择。所以这里把「抓 + 编」交给 ffmpeg，只保留 VLC 的 HTTP 分发
+（`fallback-vlc-screen.bat` 保留了纯 VLC 的老路子，作为兜底）。
 
 ## 环境要求
 
@@ -382,8 +391,9 @@ Windows 11 的「自动颜色管理（ACM）」导致：ACM 开着时 DWM 在线
 
 ## 致谢
 
-设计参考 ICPC 官方 [unicup](https://github.com/icpc/unicup) 的 ansible / systemd 推流方案，
-以及 VLC / ffmpeg 社区。
+推流架构来自 ICPC 官方 [Coach View 文档](https://tools.icpc.global/docs/CoachView.pdf) 与
+World Finals 镜像里的 systemd 服务；[hydro-dev/xcpc-tools](https://github.com/hydro-dev/xcpc-tools)
+提供了国内 XCPC 监控侧的参考。感谢 VLC 与 ffmpeg 社区。
 
 ## 许可证
 
