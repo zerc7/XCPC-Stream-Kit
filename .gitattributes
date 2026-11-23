@@ -1,0 +1,15 @@
+# cmd.exe is only reliable with CRLF line endings: a .bat/.vbs checked out
+# with LF can break `goto :label` inside multi-line blocks. Force CRLF for the
+# scripts regardless of the cloner's core.autocrlf setting.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.vbs  text eol=crlf
+*.ps1  text eol=crlf
+
+*.md   text eol=lf
+*.txt  text eol=lf
+
+# Downloaded runtime binaries (never committed, but be explicit)
+*.exe  binary
+*.dll  binary
+*.zip  binary

@@ -1,0 +1,15 @@
+# Runtime binaries - downloaded by fetch-deps.ps1, never committed.
+# ffmpeg.exe alone is ~200 MB and both are GPL builds; see README.
+bin/
+
+# Runtime state and logs
+logs/
+*.log
+STOP.flag
+_probe_*.png
+
+# Windows / editor noise
+Thumbs.db
+desktop.ini
+.vscode/
+*.swp
