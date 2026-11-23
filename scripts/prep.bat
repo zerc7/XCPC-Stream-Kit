@@ -34,29 +34,21 @@ REM The streams themselves listen on BIND_ADDR; this value is only what we print
 REM and log. Picking "the first non-loopback IPv4" is wrong on most contest PCs
 REM (VMware / Hyper-V / WSL / Bluetooth adapters), so detect_ip.ps1 walks the
 REM routing table instead. ADVERTISE_IP in config.bat overrides everything.
+REM
+REM -All prints every candidate with its metric, best pick first, so a single
+REM call both fills the log and gives us the address to show.
 set "MYIP="
-if /i not "%ADVERTISE_IP%"=="auto" set "MYIP=%ADVERTISE_IP%"
-if defined MYIP call :say "using ADVERTISE_IP from config.bat"
-
-if not defined MYIP (
-    for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0detect_ip.ps1" 2^>nul`) do if not defined MYIP set "MYIP=%%a"
+if /i not "%ADVERTISE_IP%"=="auto" (
+    set "MYIP=%ADVERTISE_IP%"
+    call :say "using ADVERTISE_IP from config.bat"
 )
 
-if not defined MYIP (
-    REM fallback for pre-Win8 / when PowerShell is unavailable
-    for /f "tokens=2 delims=:" %%a in ('ipconfig 2^>nul ^| findstr /c:"IPv4"') do (
-        set "CAND=%%a"
-        set "CAND=!CAND: =!"
-        if not defined MYIP (
-            echo !CAND! | findstr /r "^127\. ^169\.254\." >nul || set "MYIP=!CAND!"
-        )
-    )
+for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0detect_ip.ps1" -All 2^>nul`) do (
+    for /f "tokens=1" %%b in ("%%a") do if not defined MYIP set "MYIP=%%b"
+    echo [%date:~0,10% %time:~0,8%]   candidate: %%a >>"%PREPLOG%"
 )
+
 if not defined MYIP set "MYIP=0.0.0.0"
-
-REM log every candidate so a wrong pick is visible without guessing
-for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0detect_ip.ps1" -All 2^>nul`) do echo [%date:~0,10% %time:~0,8%]   candidate: %%a >>"%PREPLOG%"
-
 if "!MYIP!"=="0.0.0.0" call :say "WARNING: no usable IPv4 found, the URLs below are not reachable"
 call :say "  if this IP is wrong, set ADVERTISE_IP in config.bat (see logs\prep.log for all adapters)"
 

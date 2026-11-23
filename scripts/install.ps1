@@ -13,17 +13,6 @@ if (-not (Test-Path -LiteralPath $vbs)) {
 $startup = [Environment]::GetFolderPath('Startup')
 $lnk = Join-Path $startup 'XCPC-Stream-Kit.lnk'
 
-# Remove the shortcut left behind by older versions (the package used to be
-# called ICPC-Stream). A stale .lnk pointing at a folder that no longer exists
-# makes Windows pop an error at every logon.
-foreach ($old in @('ICPC-Stream.lnk')) {
-    $p = Join-Path $startup $old
-    if (Test-Path -LiteralPath $p) {
-        Remove-Item -LiteralPath $p -Force
-        Write-Host "[install] removed obsolete shortcut: $p"
-    }
-}
-
 $wsh = New-Object -ComObject WScript.Shell
 $s = $wsh.CreateShortcut($lnk)
 $s.TargetPath       = Join-Path $env:SystemRoot 'System32\wscript.exe'

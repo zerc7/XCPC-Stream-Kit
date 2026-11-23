@@ -6,7 +6,7 @@
 ' ===========================================================================
 Option Explicit
 
-Dim fso, sh, base, q, rc
+Dim fso, sh, base, q, rc, f
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set sh  = CreateObject("WScript.Shell")
 
@@ -18,9 +18,11 @@ Sub Fatal(msg)
     WScript.Quit 1
 End Sub
 
-If Not fso.FileExists(base & "\scripts\stream_screen.bat") Then
-    Call Fatal("cannot find \scripts\stream_screen.bat under")
-End If
+For Each f In Array("stream_screen.bat", "stream_camera.bat")
+    If Not fso.FileExists(base & "\scripts\" & f) Then
+        Call Fatal("cannot find scripts\" & f & " under")
+    End If
+Next
 
 ' The binaries are downloaded separately (see fetch-deps.ps1) and are not part
 ' of the repository, so a plain "git clone" is not runnable until they exist.

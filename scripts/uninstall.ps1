@@ -1,18 +1,12 @@
 # uninstall.ps1 - remove the logon autostart shortcut.
 $ErrorActionPreference = 'SilentlyContinue'
 $startup = [Environment]::GetFolderPath('Startup')
+$lnk = Join-Path $startup 'XCPC-Stream-Kit.lnk'
 
-$removed = 0
-# XCPC-Stream-Kit.lnk is the current name, ICPC-Stream.lnk the one written by
-# older versions of this package.
-foreach ($n in @('XCPC-Stream-Kit.lnk', 'ICPC-Stream.lnk')) {
-    $lnk = Join-Path $startup $n
-    if (Test-Path -LiteralPath $lnk) {
-        Remove-Item -LiteralPath $lnk -Force
-        Write-Host "[uninstall] removed: $lnk"
-        $removed++
-    }
+if (Test-Path -LiteralPath $lnk) {
+    Remove-Item -LiteralPath $lnk -Force
+    Write-Host "[uninstall] removed: $lnk"
+} else {
+    Write-Host "[uninstall] no startup shortcut found"
 }
-
-if ($removed -eq 0) { Write-Host "[uninstall] no startup shortcut found" }
 exit 0

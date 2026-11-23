@@ -126,11 +126,11 @@ set "VLEXIT=!errorlevel!"
 echo [%date:~0,10% %time:~0,8%] vlc exited with code !VLEXIT! >> "%LOG%"
 
 set /a FAILS+=1
-set "DELAY=%RESTART_DELAY%"
-if !FAILS! GEQ 5 set "DELAY=30"
 if !FAILS! GEQ 5 (
+    set "DELAY=30"
     echo [%date:~0,10% %time:~0,8%] failed !FAILS! times in a row, retrying every !DELAY!s. Desktop locked or moved to another session? >> "%LOG%"
 ) else (
+    set "DELAY=%RESTART_DELAY%"
     echo [%date:~0,10% %time:~0,8%] stream broken, attempt !FAILS!, restart in !DELAY!s >> "%LOG%"
 )
 set /a PINGN=!DELAY!+1

@@ -16,16 +16,18 @@ echo     3. start both streams now, then run a health check
 echo ============================================================
 echo.
 
-REM ---- dependencies must be present (bin\ is not part of the git repo) ----
-if not exist "%~dp0bin\ffmpeg.exe" (
-    echo [ERROR] bin\ffmpeg.exe is missing.
-    echo         Run this first:  powershell -ExecutionPolicy Bypass -File "%~dp0fetch-deps.ps1"
+REM loads config.bat and verifies bin\ffmpeg.exe + bin\vlc\vlc.exe (bin\ is not
+REM part of the git repo, see fetch-deps.ps1)
+call "%~dp0scripts\_common.bat"
+if errorlevel 1 (
     if not defined XCPC_NOPAUSE if /i not "%~1"=="/q" pause
     exit /b 1
 )
-if not exist "%~dp0bin\vlc\vlc.exe" (
-    echo [ERROR] bin\vlc\vlc.exe is missing.
-    echo         Run this first:  powershell -ExecutionPolicy Bypass -File "%~dp0fetch-deps.ps1"
+
+set "XCPC_BASE=%CD%"
+set "XCPC_VBS=%~dp0start-silent.vbs"
+if not exist "%XCPC_VBS%" (
+    echo [ERROR] start-silent.vbs is missing from this folder.
     if not defined XCPC_NOPAUSE if /i not "%~1"=="/q" pause
     exit /b 1
 )
@@ -41,15 +43,6 @@ if "%ADMIN%"=="0" (
     echo.
 )
 
-set "XCPC_BASE=%CD%"
-set "XCPC_VBS="
-for %%f in ("%~dp0*.vbs") do set "XCPC_VBS=%%~ff"
-if not defined XCPC_VBS (
-    echo [ERROR] start-silent.vbs is missing from this folder.
-    if not defined XCPC_NOPAUSE if /i not "%~1"=="/q" pause
-    exit /b 1
-)
-
 echo [1/3] creating startup shortcut ...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\install.ps1"
 if errorlevel 1 echo [WARN] shortcut creation failed, see messages above.
@@ -58,10 +51,6 @@ if "%ADMIN%"=="0" goto :skip_fw
 
 echo.
 echo [2/3] configuring firewall ...
-call "%~dp0scripts\_common.bat" >nul 2>&1
-REM also drop the rules created by older versions of this package
-netsh advfirewall firewall delete rule name="ICPC-Stream Screen" >nul 2>&1
-netsh advfirewall firewall delete rule name="ICPC-Stream Camera" >nul 2>&1
 netsh advfirewall firewall delete rule name="XCPC-Stream-Kit Screen" >nul 2>&1
 netsh advfirewall firewall delete rule name="XCPC-Stream-Kit Camera" >nul 2>&1
 netsh advfirewall firewall add rule name="XCPC-Stream-Kit Screen" dir=in action=allow protocol=TCP localport=%SCREEN_PORT% profile=any >nul
@@ -84,7 +73,6 @@ echo [3/3] starting streams silently ...
 echo        waiting 8s, then health check ...
 ping -n 9 127.0.0.1 >nul
 
-call "%~dp0scripts\_common.bat" >nul 2>&1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\status.ps1" -BasePath "%~dp0." -ScreenPort %SCREEN_PORT% -CamPort %CAM_PORT%
 
 echo.

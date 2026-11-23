@@ -7,8 +7,7 @@ REM ===========================================================================
 setlocal
 cd /d "%~dp0"
 
-set "SCREEN_PORT=9090"
-set "CAM_PORT=9092"
+REM ports come from config.bat via _common.bat
 call "%~dp0scripts\_common.bat" >nul 2>&1
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\status.ps1" -BasePath "%~dp0." -ScreenPort %SCREEN_PORT% -CamPort %CAM_PORT%

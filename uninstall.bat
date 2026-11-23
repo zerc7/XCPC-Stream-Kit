@@ -28,11 +28,8 @@ fsutil dirty query %SystemDrive% >nul 2>&1 && set "ADMIN=1"
 if "%ADMIN%"=="0" (
     echo        not administrator, skipped. Run as administrator to remove them.
 ) else (
-    REM both the current and the pre-rename rule names
     netsh advfirewall firewall delete rule name="XCPC-Stream-Kit Screen" >nul 2>&1
     netsh advfirewall firewall delete rule name="XCPC-Stream-Kit Camera" >nul 2>&1
-    netsh advfirewall firewall delete rule name="ICPC-Stream Screen" >nul 2>&1
-    netsh advfirewall firewall delete rule name="ICPC-Stream Camera" >nul 2>&1
     echo        done.
 )
 

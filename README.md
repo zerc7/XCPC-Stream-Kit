@@ -110,6 +110,7 @@ XCPC-Stream-Kit\
 │  ├─ stream_camera.bat   摄像头流
 │  ├─ detect_camera.ps1   自动探测摄像头
 │  ├─ detect_color.ps1    ACM 发暗探测
+│  ├─ detect_ip.ps1       本机对外 IP（走路由表，排除虚拟网卡）
 │  ├─ status.ps1 / stop.ps1 / install.ps1 / uninstall.ps1
 ├─ bin\                   fetch-deps.ps1 生成，不进仓库
 │  ├─ ffmpeg.exe          ffmpeg static build

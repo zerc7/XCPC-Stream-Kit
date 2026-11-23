@@ -7,8 +7,7 @@ REM ===========================================================================
 setlocal
 cd /d "%~dp0"
 
-set "SCREEN_PORT=9090"
-set "CAM_PORT=9092"
+REM ports come from config.bat via _common.bat
 call "%~dp0scripts\_common.bat" >nul 2>&1
 
 echo stopping XCPC-Stream-Kit streams and their restart loops ...
