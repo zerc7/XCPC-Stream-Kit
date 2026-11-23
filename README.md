@@ -72,23 +72,41 @@
 
 ### 与同类方案的关系
 
-这套东西不是新发明，ICPC 自己在 World Finals 就是这么做的：官方
-[Coach View 文档](https://tools.icpc.global/docs/CoachView.pdf) 的附录写明，每台选手机跑两个
-VLC 实例，桌面推到 `9090`、摄像头推到 `8080`，输出都是 `http{mux=ts}`；WF 镜像再把这两条命令
-包成 systemd 服务（`vlc-desktop` / `vlc-camera`，`Restart=always`）。本工具沿用同一架构，
-差异集中在 Windows 侧：
+这套东西不是新发明，赛场上跑的就是同一套管道。可参考的两处上游：
+
+**1. ICPC 官方文档** —— [Coach View 文档](https://tools.icpc.global/docs/CoachView.pdf) 的附录写明，
+每台选手机跑两个 VLC 实例，桌面推到 `9090`、摄像头推到 `8080`，输出都是 `http{mux=ts}`。
+
+**2. UCup Finals 2025 镜像** —— [unicup/unicup-finals-2025](https://github.com/unicup/unicup-finals-2025)
+把这套命令落成了可部署的形态：`ansible/files/start-vlc-screen` 与
+`ansible/files/start-vlc-dualwebcam` 是 bash 脚本，`MODE` 默认就是 `ffmpeg`，本质是
+
+```
+ffmpeg -f x11grab ... -c:v h264_qsv -g 30 -b:v 5M -f mpegts - \
+  | cvlc --play-and-exit - --sout '#transcode{}:standard{access=http,mux=ts,dst=:9090,...}'
+```
+
+摄像头那边按 `DEVICE_SET=A|B` 分两组、每组 4 个 USB 设备槽位，配 ALSA 音频，端口 `8080`；
+再包成 `vlc-webcam-front.service` / `vlc-webcam-side.service`，`Restart=always`，用 ansible 铺机器。
 
 | 方案 | 抓屏 / 编码 | 分发 | 适用场景 |
 |---|---|---|---|
-| ICPC WF（官方文档 + Linux 镜像） | VLC `screen://` / v4l2 | VLC `http{mux=ts}` | Linux，systemd 托管 |
-| **本工具包** | ffmpeg（`ddagrab` / `dshow`） | VLC `http{mux=ts}` | Windows，无 systemd |
+| ICPC WF（官方文档） | VLC `screen://` / v4l2 | VLC `http{mux=ts}` | 文档层面，Linux 现场 |
+| [unicup-finals-2025](https://github.com/unicup/unicup-finals-2025) | ffmpeg `x11grab`（qsv）/ `v4l2` | VLC `http{mux=ts}` | Linux + systemd + ansible |
+| **本工具包** | ffmpeg `ddagrab` / `dshow` | VLC `http{mux=ts}` | Windows，无 systemd |
 | [hydro-dev/xcpc-tools](https://github.com/hydro-dev/xcpc-tools) | 不产生流，只消费流地址 | 代理 + 监控面板 | 国内 XCPC，配合选手机镜像 |
 | [webrtc-grabber](https://github.com/irdkwmnsb/webrtc-grabber) | Electron 抓屏 / 摄像头 | WebRTC + SFU relay | 给人看低延迟画面，不是给 CDS |
 | MediaMTX / SRS / nginx-rtmp | 不抓屏 | RTMP / HLS / WebRTC | 通用流服务器；输出不是 CDS 要的裸 HTTP-TS |
 
-为什么不直接用 VLC 抓屏：Windows 上 `screen://` 走 GDI，慢且会让本机鼠标闪，也没有
-`ddagrab` 与编码器选择。所以这里把「抓 + 编」交给 ffmpeg，只保留 VLC 的 HTTP 分发
+**为什么 Windows 上需要另做一份**：unicup 那套依赖三条 Linux 才有的东西——`x11grab`、
+`v4l2`/ALSA、systemd。Windows 没有 systemd 的 `Restart=always`，`screen://` 走 GDI 既慢
+又会让本机鼠标闪，DirectShow 的设备名还是中文的、直接塞进 `.bat` 会把命令行解析搞坏。
+所以这里把「抓 + 编」交给 ffmpeg（`ddagrab` / `gdigrab` 兜底 + `dshow`），
+只保留 VLC 的 HTTP 分发，重连循环、日志、自启、配置全部手写
 （`fallback-vlc-screen.bat` 保留了纯 VLC 的老路子，作为兜底）。
+
+> 注意：上游仓库**没有声明 LICENSE**，所以这里只沿用架构与命令行思路，没有复制其文件。
+> 要引用它的脚本请先联系 UCup 组织者。
 
 ## 环境要求
 
@@ -391,9 +409,11 @@ Windows 11 的「自动颜色管理（ACM）」导致：ACM 开着时 DWM 在线
 
 ## 致谢
 
-推流架构来自 ICPC 官方 [Coach View 文档](https://tools.icpc.global/docs/CoachView.pdf) 与
-World Finals 镜像里的 systemd 服务；[hydro-dev/xcpc-tools](https://github.com/hydro-dev/xcpc-tools)
-提供了国内 XCPC 监控侧的参考。感谢 VLC 与 ffmpeg 社区。
+推流架构来自 ICPC 官方 [Coach View 文档](https://tools.icpc.global/docs/CoachView.pdf)，
+可部署形态参考 [unicup/unicup-finals-2025](https://github.com/unicup/unicup-finals-2025)
+的 `start-vlc-screen` / `start-vlc-dualwebcam` + systemd 方案；
+[hydro-dev/xcpc-tools](https://github.com/hydro-dev/xcpc-tools) 提供了国内 XCPC 监控侧的参考。
+感谢 VLC 与 ffmpeg 社区。
 
 ## 许可证
 
