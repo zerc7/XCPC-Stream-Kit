@@ -94,9 +94,6 @@ ffmpeg -f x11grab ... -c:v h264_qsv -g 30 -b:v 5M -f mpegts - \
 | ICPC WF（官方文档） | VLC `screen://` / v4l2 | VLC `http{mux=ts}` | 文档层面，Linux 现场 |
 | [unicup-finals-2025](https://github.com/unicup/unicup-finals-2025) | ffmpeg `x11grab`（qsv）/ `v4l2` | VLC `http{mux=ts}` | Linux + systemd + ansible |
 | **本工具包** | ffmpeg `ddagrab` / `dshow` | VLC `http{mux=ts}` | Windows，无 systemd |
-| [hydro-dev/xcpc-tools](https://github.com/hydro-dev/xcpc-tools) | 不产生流，只消费流地址 | 代理 + 监控面板 | 国内 XCPC，配合选手机镜像 |
-| [webrtc-grabber](https://github.com/irdkwmnsb/webrtc-grabber) | Electron 抓屏 / 摄像头 | WebRTC + SFU relay | 给人看低延迟画面，不是给 CDS |
-| MediaMTX / SRS / nginx-rtmp | 不抓屏 | RTMP / HLS / WebRTC | 通用流服务器；输出不是 CDS 要的裸 HTTP-TS |
 
 **为什么 Windows 上需要另做一份**：unicup 那套依赖三条 Linux 才有的东西——`x11grab`、
 `v4l2`/ALSA、systemd。Windows 没有 systemd 的 `Restart=always`，`screen://` 走 GDI 既慢
@@ -104,9 +101,6 @@ ffmpeg -f x11grab ... -c:v h264_qsv -g 30 -b:v 5M -f mpegts - \
 所以这里把「抓 + 编」交给 ffmpeg（`ddagrab` / `gdigrab` 兜底 + `dshow`），
 只保留 VLC 的 HTTP 分发，重连循环、日志、自启、配置全部手写
 （`fallback-vlc-screen.bat` 保留了纯 VLC 的老路子，作为兜底）。
-
-> 注意：上游仓库**没有声明 LICENSE**，所以这里只沿用架构与命令行思路，没有复制其文件。
-> 要引用它的脚本请先联系 UCup 组织者。
 
 ## 环境要求
 
