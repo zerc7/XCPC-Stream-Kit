@@ -23,12 +23,9 @@
 - [验证](#验证)
 - [常见问题](#常见问题)
 - [安全说明](#安全说明)
-- [批量部署](#批量部署)
 - [日志](#日志)
 - [已知限制](#已知限制)
-- [贡献](#贡献)
 - [致谢](#致谢)
-- [许可证](#许可证)
 
 ## 特性
 
@@ -44,11 +41,8 @@
   写进主日志；`stop.bat` 会在日志末尾留停止标记，避免把正常停止误判成故障。
 - **抓屏不闪光标** —— 默认走 Desktop Duplication API（`ddagrab`），不可用时自动退回
   `gdigrab`，实际用了哪个会写进日志。
-- **颜色自适应** —— 自动识别 Windows 11「自动颜色管理」导致的抓屏偏暗并做反向补偿，
-  没开 ACM 的机器不做任何处理。
 - **摄像头可热换** —— 自动探测设备（优先使用 ASCII 别名），连续失败 3 次后重新探测，
   换一台摄像头不需要重启脚本。
-- **纯 ASCII 脚本** —— 任意系统代码页下都不会因为中文被 cmd 拆行；中文只存在于本文档。
 
 ## 工作原理
 
@@ -70,38 +64,6 @@
 编码参数：H.264 Main / yuv420p / SAR 1:1；屏幕 1920×1080 @ 25 fps 5 Mbps，摄像头
 1280×720 @ 25 fps 2.5 Mbps；GOP 50 帧（2 秒一个关键帧，方便 CDS 切 reaction 片段）。
 
-### 与同类方案的关系
-
-这套东西不是新发明，赛场上跑的就是同一套管道。可参考的两处上游：
-
-**1. ICPC 官方文档** —— [Coach View 文档](https://tools.icpc.global/docs/CoachView.pdf) 的附录写明，
-每台选手机跑两个 VLC 实例，桌面推到 `9090`、摄像头推到 `8080`，输出都是 `http{mux=ts}`。
-
-**2. UCup Finals 2025 镜像** —— [unicup/unicup-finals-2025](https://github.com/unicup/unicup-finals-2025)
-把这套命令落成了可部署的形态：`ansible/files/start-vlc-screen` 与
-`ansible/files/start-vlc-dualwebcam` 是 bash 脚本，`MODE` 默认就是 `ffmpeg`，本质是
-
-```
-ffmpeg -f x11grab ... -c:v h264_qsv -g 30 -b:v 5M -f mpegts - \
-  | cvlc --play-and-exit - --sout '#transcode{}:standard{access=http,mux=ts,dst=:9090,...}'
-```
-
-摄像头那边按 `DEVICE_SET=A|B` 分两组、每组 4 个 USB 设备槽位，配 ALSA 音频，端口 `8080`；
-再包成 `vlc-webcam-front.service` / `vlc-webcam-side.service`，`Restart=always`，用 ansible 铺机器。
-
-| 方案 | 抓屏 / 编码 | 分发 | 适用场景 |
-|---|---|---|---|
-| ICPC WF（官方文档） | VLC `screen://` / v4l2 | VLC `http{mux=ts}` | 文档层面，Linux 现场 |
-| [unicup-finals-2025](https://github.com/unicup/unicup-finals-2025) | ffmpeg `x11grab`（qsv）/ `v4l2` | VLC `http{mux=ts}` | Linux + systemd + ansible |
-| **本工具包** | ffmpeg `ddagrab` / `dshow` | VLC `http{mux=ts}` | Windows，无 systemd |
-
-**为什么 Windows 上需要另做一份**：unicup 那套依赖三条 Linux 才有的东西——`x11grab`、
-`v4l2`/ALSA、systemd。Windows 没有 systemd 的 `Restart=always`，`screen://` 走 GDI 既慢
-又会让本机鼠标闪，DirectShow 的设备名还是中文的、直接塞进 `.bat` 会把命令行解析搞坏。
-所以这里把「抓 + 编」交给 ffmpeg（`ddagrab` / `gdigrab` 兜底 + `dshow`），
-只保留 VLC 的 HTTP 分发，重连循环、日志、自启、配置全部手写
-（`fallback-vlc-screen.bat` 保留了纯 VLC 的老路子，作为兜底）。
-
 ## 环境要求
 
 | 项 | 要求 |
@@ -110,7 +72,6 @@ ffmpeg -f x11grab ... -c:v h264_qsv -g 30 -b:v 5M -f mpegts - \
 | PowerShell | 5.1（系统自带，无需安装） |
 | 磁盘 | 约 410 MB（ffmpeg 218 MB + VLC 189 MB + 脚本） |
 | 权限 | 仅 `install.bat` / `uninstall.bat` 里的防火墙部分需要管理员；推流本身不需要 |
-| 会话 | 必须是**已登录的交互式桌面**，锁屏、RDP 断开即断流 |
 | 网络 | 与 CDS / 导播机同网段，TCP 9090、9092 可达 |
 
 ## 快速开始
@@ -120,7 +81,7 @@ ffmpeg -f x11grab ... -c:v h264_qsv -g 30 -b:v 5M -f mpegts - \
 **方式 A：git clone（推荐，仓库不含二进制）**
 
 ```powershell
-git clone https://github.com/<you>/XCPC-Stream-Kit.git
+git clone https://github.com/zerc7/XCPC-Stream-Kit.git
 cd XCPC-Stream-Kit
 powershell -ExecutionPolicy Bypass -File .\fetch-deps.ps1
 ```
@@ -138,7 +99,7 @@ powershell -ExecutionPolicy Bypass -File .\fetch-deps.ps1
 
 ### 2. 改配置（可选）
 
-按需修改 `config.bat`（端口 / 分辨率 / 码率 / 编码器 / 麦克风）。**默认值可直接使用。**
+按需修改 `config.bat`（端口 / 分辨率 / 码率 / 编码器 / 麦克风）。
 
 ### 3. 安装
 
@@ -148,9 +109,9 @@ powershell -ExecutionPolicy Bypass -File .\fetch-deps.ps1
 2. 放行入站 TCP 9090 / 9092（非管理员会自动跳过）；
 3. 立刻静默启动一次并跑自检。
 
-之后每次登录都会在后台推流，**没有任何窗口**。
+之后每次登录都会在后台推流。
 
-### 4. 只想临时跑一次
+### 4. 临时使用
 
 ```
 双击 start-silent.vbs      ← 静默启动，双击后没有反应是正常的
@@ -160,6 +121,14 @@ powershell -ExecutionPolicy Bypass -File .\fetch-deps.ps1
 
 > `start-silent.vbs` 不会弹任何提示。确认方式：跑 `status.bat`，`[streams]` 两行都是 `OK`。
 > 如果 `bin\` 缺文件，它会弹错误框提示先跑 `fetch-deps.ps1`，不会静默失败。
+
+### 批量部署
+
+1. 在一台机器上把 `config.bat` 调好（端口、分辨率、码率）。
+2. 在这台机器上跑完 `fetch-deps.ps1`，整个文件夹（约 410 MB）进镜像 / 母盘。
+3. 每台机器以管理员身份跑一次 `install.bat`（或写进部署脚本用 `install.bat /q`）。
+4. 每台机器 IP 必须固定（DHCP 保留或静态）。
+5. 卸载：`uninstall.bat`。
 
 ## 命令一览
 
@@ -244,7 +213,6 @@ base : D:\XCPC-Stream-Kit
 
 - `OK` 表示**真的连上去拉了一段数据并校验到 TS 同步字节 0x47**，不是只看端口在不在。
 - `FAIL` 往下看 `[logs]`，或直接看 `logs\screen.log` / `logs\camera.log`。
-- `up=` 超过一天显示为 `1d 03:20:15`。
 
 ## 常见问题
 
@@ -262,10 +230,6 @@ base : D:\XCPC-Stream-Kit
 **`stop.bat` 之后直接双击 `scripts\stream_screen.bat` 没反应**
 `stop.bat` 会留下 `STOP.flag`，只有 `prep.bat`（`start-silent.vbs` / `start-debug.bat` /
 `install.bat` 会调用）才清掉它。这是为了防止「刚停掉又被重连循环拉起来」。
-
-**能不能做成「无论是否登录都运行」的计划任务或服务？**
-不行。抓屏必须在已登录的交互式会话里跑。正确做法是让选手机自动登录，自启快捷方式在
-登录后拉起。
 
 ### 画面
 
@@ -355,15 +319,6 @@ Windows 11 的「自动颜色管理（ACM）」导致：ACM 开着时 DWM 在线
 - 不要把已设 `BIND_ADDR=0.0.0.0` 的端口映射到公网。
 - VLC 的 HTTP 输出没有密码、没有 Token，也不打算加：需要鉴权请在交换机 ACL 或 CDS 侧解决。
 
-## 批量部署
-
-1. 在一台机器上把 `config.bat` 调好（端口、分辨率、码率定死，24 台参数一致，
-   这样 OBS 里各队画面比例完全相同，不用逐台调整）。
-2. 在这台机器上跑完 `fetch-deps.ps1`，整个文件夹（约 410 MB）进镜像 / 母盘，不要 U 盘现拷。
-3. 每台机器以管理员身份跑一次 `install.bat`（或写进部署脚本用 `install.bat /q`）。
-4. 每台机器 IP 必须固定（DHCP 保留或静态），否则 `cdsConfig.xml` 一改就全乱。
-5. 收工：`uninstall.bat`，或先 `stop.bat` 再删文件夹。
-
 ## 日志
 
 `logs\` 下全部是纯文本，记事本可直接打开：
@@ -378,28 +333,15 @@ Windows 11 的「自动颜色管理（ACM）」导致：ACM 开着时 DWM 在线
 | `screen-fallback.log` | 备用 VLC 抓屏脚本的日志 |
 
 `screen.log` / `camera.log` 每次启动时清空重写，重连记录在同一次运行内追加。
-时间戳是纯 ASCII（`2026/11/23 21:04:11`），不会因系统语言变成乱码。
 
 > 用记事本打开日志时，ffmpeg 的 `2>>log` 可能写失败。排查完记得关掉，否则会影响重连记录。
 
 ## 已知限制
 
 - 仅支持 Windows：抓屏依赖 `ddagrab` / `gdigrab`，摄像头依赖 DirectShow。
-- 只能抓**已登录的交互式桌面**，锁屏 / RDP 断开即断流。
 - 单机双路（屏幕 + 1 路摄像头）；需要更多路就复制一份并改端口。
 - 无鉴权，见[安全说明](#安全说明)。
 - 只使用 `bin\` 内的便携二进制，不使用系统 PATH 里的 ffmpeg / VLC（避免版本不一致导致的问题）。
-
-## 贡献
-
-欢迎 issue 与 PR。提交前请遵守两条硬约束：
-
-- **脚本必须纯 ASCII**（`.bat` / `.ps1` / `.vbs`）：中文注释在非 UTF-8 代码页下会被 cmd 拆行，
-  导致整段执行失败。中文只写进 `README.md`。
-- **换行必须 CRLF**：`.bat` 用 LF 会让 `goto :label` 在多行块里失效。仓库已用 `.gitattributes`
-  钉死 `*.bat text eol=crlf`，请勿删除。
-
-改完至少在真机上跑一遍：`prep.bat` → `start-debug.bat` → `status.bat`（两路都是 `OK`）→ `stop.bat`。
 
 ## 致谢
 
@@ -408,8 +350,3 @@ Windows 11 的「自动颜色管理（ACM）」导致：ACM 开着时 DWM 在线
 的 `start-vlc-screen` / `start-vlc-dualwebcam` + systemd 方案；
 [hydro-dev/xcpc-tools](https://github.com/hydro-dev/xcpc-tools) 提供了国内 XCPC 监控侧的参考。
 感谢 VLC 与 ffmpeg 社区。
-
-## 许可证
-
-脚本部分采用 MIT，见 [LICENSE](LICENSE)。
-运行时依赖 ffmpeg（GPLv3）与 VLC（GPLv2+），由 `fetch-deps.ps1` 单独下载，不随仓库分发。
